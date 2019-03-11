@@ -756,4 +756,6 @@ prompt_pure_setup() {
 	prompt_pure_async_start
 }
 
-prompt_pure_setup "$@"
+if [[ -o login ]]; then
+    prompt_pure_setup "$@"
+fi
