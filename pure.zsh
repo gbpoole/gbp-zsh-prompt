@@ -123,6 +123,7 @@ prompt_pure_preprompt_render() {
 
 	# Set color for Git branch/dirty status and change color if dirty checking has been delayed.
 	local git_color=$prompt_pure_colors[git:branch]
+	local conda_color=$prompt_pure_colors[virtualenv]
 	[[ -n ${prompt_pure_git_last_dirty_check_timestamp+x} ]] && git_color=$prompt_pure_colors[git:branch:cached]
 
 	# Initialize the preprompt array.
@@ -131,10 +132,16 @@ prompt_pure_preprompt_render() {
 	# Set the path.
 	preprompt_parts+=('%F{${prompt_pure_colors[path]}}%~%f')
 
+	# Anaconda environment
+    if [[ ! -z $CONDA_DEFAULT_ENV ]]; then
+		conda_env="${CONDA_DEFAULT_ENV//[$'\t\r\n']}"
+		preprompt_parts+=("%F{$conda_color}"$'\uE73C${conda_env}%f')
+	fi
+
 	# Add Git branch and dirty status info.
 	typeset -gA prompt_pure_vcs_info
 	if [[ -n $prompt_pure_vcs_info[branch] ]]; then
-		preprompt_parts+=("\uF109 %F{$git_color}"'${prompt_pure_vcs_info[branch]}${prompt_pure_git_dirty}%f')
+		preprompt_parts+=("%F{$git_color}"$'\uE725${prompt_pure_vcs_info[branch]}${prompt_pure_git_dirty}%f')
 	fi
 
 	# Git pull/push arrows.
@@ -681,7 +688,8 @@ prompt_pure_setup() {
 		user                 242
 		user:root            default
 		virtualenv           242
-	)
+       )
+
 	prompt_pure_colors=("${(@kv)prompt_pure_colors_default}")
 
 	add-zsh-hook precmd prompt_pure_precmd
