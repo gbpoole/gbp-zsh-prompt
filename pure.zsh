@@ -531,11 +531,13 @@ prompt_pure_reset_prompt() {
 }
 
 prompt_pure_reset_prompt_symbol() {
+	prompt_pure_state[preprompt]="${PURE_PROMPT_PRESYMBOL}"
 	prompt_pure_state[prompt]=${PURE_PROMPT_SYMBOL:-❯}
 }
 
 prompt_pure_update_vim_prompt_widget() {
 	setopt localoptions noshwordsplit
+	prompt_pure_state[preprompt]="${PURE_PROMPT_PRESYMBOL}"
 	prompt_pure_state[prompt]=${${KEYMAP/vicmd/${PURE_PROMPT_VICMD_SYMBOL:-❮}}/(main|viins)/${PURE_PROMPT_SYMBOL:-❯}}
 
 	prompt_pure_reset_prompt
@@ -598,7 +600,8 @@ prompt_pure_state_setup() {
 	prompt_pure_state[version]="1.10.3"
 	prompt_pure_state+=(
 		username "$username"
-		prompt	 "${PURE_PROMPT_SYMBOL:-❯}"
+		preprompt "${PURE_PROMPT_PRESYMBOL}"
+		prompt "${PURE_PROMPT_SYMBOL:-❯}"
 	)
 }
 
@@ -683,6 +686,7 @@ prompt_pure_setup() {
 		git:branch:cached    red
 		host                 242
 		path                 blue
+		prompt:preprompt     blue
 		prompt:error         red
 		prompt:success       magenta
 		user                 242
@@ -705,10 +709,13 @@ prompt_pure_setup() {
 		add-zle-hook-widget zle-keymap-select prompt_pure_update_vim_prompt_widget
 	fi
 
-	# If a virtualenv is activated, display it in grey.
-	PROMPT='%(12V.%F{$prompt_pure_colors[virtualenv]}%12v%f .)'
+	PROMPT=""
+
+	## If a virtualenv is activated, display it in grey.
+	#PROMPT+='╰%(12V.%F{$prompt_pure_colors[virtualenv]}%12v%f .)'
 
 	# Prompt turns red if the previous command didn't exit with 0.
+	PROMPT+='%F{$prompt_pure_colors[prompt:preprompt]}${prompt_pure_state[preprompt]}%f'
 	PROMPT+='%(?.%F{$prompt_pure_colors[prompt:success]}.%F{$prompt_pure_colors[prompt:error]})${prompt_pure_state[prompt]}%f '
 
 	# Indicate continuation prompt by ... and use a darker color for it.
