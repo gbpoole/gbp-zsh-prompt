@@ -23,7 +23,6 @@
 # \e[K  => clears everything after the cursor on the current line
 # \e[2K => clear everything on the current line
 
-
 # Turns seconds into human readable time.
 # 165392 => 1d 21h 56m 32s
 # https://github.com/sindresorhus/pretty-time-zsh
@@ -122,35 +121,44 @@ prompt_pure_preprompt_render() {
 	setopt localoptions noshwordsplit
 
 	# Set color for Git branch/dirty status and change color if dirty checking has been delayed.
-	local git_color=$prompt_pure_colors[git:branch]
-	local conda_color=$prompt_pure_colors[virtualenv]
-	[[ -n ${prompt_pure_git_last_dirty_check_timestamp+x} ]] && git_color=$prompt_pure_colors[git:branch:cached]
+	if [[ -n ${prompt_pure_git_last_dirty_check_timestamp+x} ]]; then
+		git_color=$prompt_pure_colors[git:branch:cached]
+	else
+		git_color=$prompt_pure_colors[git:branch]
+	fi
 
 	# Initialize the preprompt array.
 	local -a preprompt_parts
 
 	# Set the path.
-	preprompt_parts+=('%F{${prompt_pure_colors[path]}}%~%f')
-
-	# Anaconda environment
-    if [[ ! -z $CONDA_DEFAULT_ENV ]]; then
-		conda_env="${CONDA_DEFAULT_ENV//[$'\t\r\n']}"
-		preprompt_parts+=("%F{$conda_color}"$'\uE73C${conda_env}%f')
-	fi
-
-	# Add Git branch and dirty status info.
-	typeset -gA prompt_pure_vcs_info
-	if [[ -n $prompt_pure_vcs_info[branch] ]]; then
-		preprompt_parts+=("%F{$git_color}"$'\uE725${prompt_pure_vcs_info[branch]}${prompt_pure_git_dirty}%f')
-	fi
-
-	# Git pull/push arrows.
-	if [[ -n $prompt_pure_git_arrows ]]; then
-		preprompt_parts+=('%F{$prompt_pure_colors[git:arrow]}${prompt_pure_git_arrows}%f')
-	fi
+	preprompt_parts=('%F{$prompt_pure_colors[path]}%~%f')
 
 	# Username and machine, if applicable.
 	[[ -n $prompt_pure_state[username] ]] && preprompt_parts+=($prompt_pure_state[username])
+
+	# Ppyenv environment
+	if [[ ! -z $PYENV_VERSION ]]; then
+		pyenv_env="${PYENV_VERSION//[$'\t\r\n']}"
+		preprompt_parts+=("%F{$prompt_pure_colors[pyenv]}"$'\uE73C${pyenv_env}%f')
+	fi
+
+	# Anaconda environment
+	if [[ ! -z $CONDA_DEFAULT_ENV ]]; then
+		conda_env="${CONDA_DEFAULT_ENV//[$'\t\r\n']}"
+		preprompt_parts+=("%F{$prompt_pure_colors[conda]}"$'\uE73C${conda_env}%f')
+	fi
+
+	# Git status
+	typeset -gA prompt_pure_vcs_info
+	if [[ -n $prompt_pure_vcs_info[branch] ]]; then
+		# Branch and dirty status
+		preprompt_parts+=("%F{$git_color}"$'\uE725${prompt_pure_vcs_info[branch]}'"%F{$prompt_pure_colors[git:status]}"$'${prompt_pure_git_dirty}%f')
+
+		# Pull/push arrows.
+		if [[ -n $prompt_pure_git_arrows ]]; then
+			preprompt_parts+=('%F{$prompt_pure_colors[git:status]}${prompt_pure_git_arrows}%f')
+		fi
+	fi
 
 	# Execution time.
 	[[ -n $prompt_pure_cmd_exec_time ]] && preprompt_parts+=('%F{$prompt_pure_colors[execution_time]}${prompt_pure_cmd_exec_time}%f')
@@ -590,11 +598,12 @@ prompt_pure_state_setup() {
 	fi
 
 	hostname='%F{$prompt_pure_colors[host]}@%m%f'
-	## Show `username@host` if logged in through SSH.
-	#[[ -n $ssh_connection ]] && username='%F{$prompt_pure_colors[user]}%n%f'"$hostname"
 
-	## Show `username@host` if root, with username in default color.
-	#[[ $UID -eq 0 ]] && username='%F{$prompt_pure_colors[user:root]}%n%f'"$hostname"
+	# Show `username@host` if logged in through SSH.
+	[[ -n $ssh_connection ]] && username='%F{$prompt_pure_colors[user]}%n%f'"$hostname"
+
+	# Show `username@host` if root, with username in default color.
+	[[ $UID -eq 0 ]] && username='%F{$prompt_pure_colors[user:root]}%n%f'"$hostname"
 
 	typeset -gA prompt_pure_state
 	prompt_pure_state[version]="1.10.3"
@@ -678,20 +687,24 @@ prompt_pure_setup() {
 	autoload -Uz +X add-zle-hook-widget 2>/dev/null
 
 	# Set the colors.
+	# These defaults can all be overridden by the user's config.
+	# Run 'print_colours' in the shell to get a list of available colours,
+	# in addition to the named colours that zsh supports.
 	typeset -gA prompt_pure_colors_default prompt_pure_colors
 	prompt_pure_colors_default=(
-		execution_time       yellow
-		git:arrow            cyan
-		git:branch           242
-		git:branch:cached    red
-		host                 242
-		path                 blue
-		prompt:preprompt     blue
 		prompt:error         red
-		prompt:success       magenta
-		user                 242
-		user:root            default
-		virtualenv           242
+		prompt:success       green
+		execution_time       red
+		git:status           226
+		git:branch           208
+		git:branch:cached    172
+		user                 81
+		user:root            198
+		host                 75
+		conda                35
+		pyenv                47
+		prompt:preprompt     218
+		path                 218
        )
 
 	prompt_pure_colors=("${(@kv)prompt_pure_colors_default}")
@@ -710,9 +723,6 @@ prompt_pure_setup() {
 	fi
 
 	PROMPT=""
-
-	## If a virtualenv is activated, display it in grey.
-	#PROMPT+='╰%(12V.%F{$prompt_pure_colors[virtualenv]}%12v%f .)'
 
 	# Prompt turns red if the previous command didn't exit with 0.
 	PROMPT+='%F{$prompt_pure_colors[prompt:preprompt]}${prompt_pure_state[preprompt]}%f'
