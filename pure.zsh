@@ -151,13 +151,18 @@ prompt_pure_preprompt_render() {
 	# Git status
 	typeset -gA prompt_pure_vcs_info
 	if [[ -n $prompt_pure_vcs_info[branch] ]]; then
+		local git_text
+		# Branch
+		git_text="%F{$git_color}"$'\uE725${prompt_pure_vcs_info[branch]}%f'
+
 		# Branch and dirty status
-		preprompt_parts+=("%F{$git_color}"$'\uE725${prompt_pure_vcs_info[branch]}'"%F{$prompt_pure_colors[git:status]}"$'${prompt_pure_git_dirty}%f')
+		git_text=$git_text"%F{$prompt_pure_colors[git:status]}"$'${prompt_pure_git_dirty}%f'
 
 		# Pull/push arrows.
 		if [[ -n $prompt_pure_git_arrows ]]; then
-			preprompt_parts+=('%F{$prompt_pure_colors[git:status]}${prompt_pure_git_arrows}%f')
+			git_text=$git_text'%F{$prompt_pure_colors[git:status]}${prompt_pure_git_arrows}%f'
 		fi
+		preprompt_parts+=( $git_text )
 	fi
 
 	# Execution time.
@@ -412,8 +417,10 @@ prompt_pure_check_git_arrows() {
 	setopt localoptions noshwordsplit
 	local arrows left=${1:-0} right=${2:-0}
 
-	(( right > 0 )) && arrows+=${PURE_GIT_DOWN_ARROW:-⇣}
-	(( left > 0 )) && arrows+=${PURE_GIT_UP_ARROW:-⇡}
+	(( right > 0 )) && arrows+=${PURE_GIT_DOWN_ARROW:-$'\uFC2C'}
+	# (( right > 0 )) && arrows+=${PURE_GIT_DOWN_ARROW:-⇣}
+	(( left > 0 )) && arrows+=${PURE_GIT_UP_ARROW:-$'\uFC35'}
+	# (( left > 0 )) && arrows+=${PURE_GIT_UP_ARROW:-⇡}
 
 	[[ -n $arrows ]] || return
 	typeset -g REPLY=$arrows
