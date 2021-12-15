@@ -1,15 +1,15 @@
-# Author: Sindre Sorhus
-# Maintainer: Pat Brisbin <pbrisbin@gmail.com>
-# Contributor: Emil Falk <emph@emph.se>
+# Author: Gregory B. Poole <gbpoole@gmail.com>
+# Maintainer: Gregory B. Poole <gbpoole@gmail.com>
+# Contributor: Gregory B. Poole <gbpoole@gmail.com>
 pkgname=zsh-pure-prompt-git
 pkgver=r61.7d3b317
 pkgrel=1
-pkgdesc='A minimal and pure prompt for zsh.'
+pkgdesc='Async Zsh prompt for gbpoole.'
 arch=('any')
-url='https://github.com/sindresorhus/pure'
+url='https://github.com/gbpoole/gbp-zsh-prompt'
 license=('MIT')
 depends=('zsh' 'git')
-source=("$pkgname::git://github.com/sindresorhus/pure.git")
+source=("$pkgname::git://github.com/gbpoole/gbp-zsh-prompt.git")
 sha256sums=('SKIP')
 
 pkgver() {
@@ -19,8 +19,8 @@ pkgver() {
 
 package() {
   cd $srcdir/$pkgname
-  install -Dm644 pure.zsh \
-    "$pkgdir/usr/share/zsh/functions/Prompts/prompt_pure_setup"
+  install -Dm644 gbp-zsh-prompt.zsh \
+    "$pkgdir/usr/share/zsh/functions/Prompts/prompt_gbp_zsh_prompt_setup"
   install -Dm644 async.zsh \
     "$pkgdir/usr/share/zsh/functions/async"
 }

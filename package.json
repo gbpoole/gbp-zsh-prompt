@@ -1,18 +1,18 @@
 {
-	"name": "pure-prompt",
-	"version": "1.10.3",
-	"description": "Pretty, minimal and fast ZSH prompt",
+	"name": "gbp-zsh-prompt",
+	"version": "0.1.0",
+	"description": "Async Zsh prompt for gbpoole.",
 	"license": "MIT",
-	"repository": "sindresorhus/pure",
+	"repository": "gbpoole/gbp-zsh-prompt",
 	"author": {
-		"name": "Sindre Sorhus",
-		"email": "sindresorhus@gmail.com",
-		"url": "https://sindresorhus.com"
+		"name": "Gregory B. Poole",
+		"email": "gbpoole@gmail.com",
+		"url": "https://www.astronomy.swin.edu.au/~gpoole/"
 	},
 	"maintainers": [
 		{
-			"name": "Mathias Fredriksson",
-			"url": "https://github.com/mafredri"
+			"name": "Gregory B. Poole",
+			"url": "https://github.com/gbpoole"
 		}
 	],
 	"scripts": {
@@ -21,7 +21,7 @@
 		"postinstall-fail-instructions": "echo \"ERROR: Could not automagically symlink the prompt. Either:\\n1. Check out the readme on how to do it manually: https://github.com/sindresorhus/pure#manually\\n2. Or add the following to your \\`.zshrc\\`:\\n\\n    fpath+=('$PWD/functions')\""
 	},
 	"files": [
-		"pure.zsh",
+		"gbp-zsh-prompt.zsh",
 		"async.zsh"
 	],
 	"keywords": [
@@ -29,8 +29,6 @@
 		"zshell",
 		"sh",
 		"shell",
-		"bash",
-		"pure",
 		"prompt",
 		"theme",
 		"git",
