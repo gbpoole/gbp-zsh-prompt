@@ -171,6 +171,7 @@ _async_worker() {
 		# Parse the request using shell parsing (z) to allow commands
 		# to be parsed from single strings and multi-args alike.
 		cmd=("${(z)request}")
+		echo $cmd >> /tmp/testasync
 
 		# Name of the job (first argument).
 		local job=$cmd[1]

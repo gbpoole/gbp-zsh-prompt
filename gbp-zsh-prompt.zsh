@@ -1,4 +1,4 @@
-# Pure
+# This prompt has been modified from the Pure prompt
 # by Sindre Sorhus
 # https://github.com/sindresorhus/pure
 # MIT License
@@ -137,10 +137,7 @@ prompt_preprompt_render() {
 	[[ -n $prompt_state[username] ]] && preprompt_parts+=($prompt_state[username])
 
 	# Ppyenv environment
-	if (( $+commands[pyenv] )); then
-		pyenv_env=$( pyenv version-name )
-		preprompt_parts+=("%F{$prompt_colors[pyenv]}"$'\uE73C${pyenv_env}%f')
-	fi
+	[[ -n $prompt_pyenv_env ]] && preprompt_parts+=("%F{$prompt_colors[pyenv]}"$'\uE73C${prompt_pyenv_env}%f')
 
 	# Anaconda environment
 	if [[ ! -z $CONDA_DEFAULT_ENV ]]; then
@@ -207,14 +204,14 @@ prompt_precmd() {
 	prompt_check_cmd_exec_time
 	unset prompt_cmd_timestamp
 
+	# Launch async tasks
+	prompt_async_tasks
+
 	# Shows the full path in the title.
 	prompt_set_title 'expand-prompt' '%~'
 
 	# Modify the colors if some have changed..
 	prompt_set_colors
-
-	# Perform async Git dirty check and fetch.
-	prompt_async_tasks
 
 	# Check if we should display the virtual env. We use a sufficiently high
 	# index of psvar (12) here to avoid collisions with user defined entries.
@@ -237,7 +234,7 @@ prompt_precmd() {
 	prompt_preprompt_render "precmd"
 
 	if [[ -n $ZSH_THEME ]]; then
-		print "WARNING: Oh My Zsh themes are enabled (ZSH_THEME='${ZSH_THEME}'). Pure might not be working correctly."
+		print "WARNING: Oh My Zsh themes are enabled (ZSH_THEME='${ZSH_THEME}'). This prompt might not be working correctly."
 		print "For more information, see: https://github.com/sindresorhus/pure#oh-my-zsh"
 		unset ZSH_THEME  # Only show this warning once.
 	fi
@@ -294,10 +291,17 @@ prompt_async_git_dirty() {
 	if [[ $untracked_dirty = 0 ]]; then
 		command git diff --no-ext-diff --quiet --exit-code
 	else
+		# `test -z` returns true if the length of a string is zero
 		test -z "$(command git status --porcelain --ignore-submodules -unormal)"
 	fi
 
 	return $?
+}
+
+prompt_async_pyenv() {
+	setopt localoptions noshwordsplit
+	# print -r $(env | grep PYENV) $(pyenv version-name) ${PWD}
+	print -r $(pyenv version-name)
 }
 
 prompt_async_git_fetch() {
@@ -360,6 +364,26 @@ prompt_async_tasks() {
 	# Update the current working directory of the async worker.
 	async_worker_eval "prompt" builtin cd -q $PWD
 
+	if type pyenv > /dev/null 2>&1; then
+		typeset -g prompt_pyenv_env
+		# env | grep PYENV
+
+		# while read -r varname; do echo async_worker_eval "prompt" $(export -p $varname); done < <(env | cut -f1 -d= | grep PYENV)
+
+		# Keep these values up-to-date for the worker, since they're used by `pyenv version-name`
+		# First: clear them from the worker (note: this is needed because values can be deleted as
+		# well as changed)
+		async_worker_eval "prompt" "while read -r varname; do unset \$varname; done < <(env | cut -f1 -d= | grep PYENV)"
+		# Second: update
+		while read -r varname; do async_worker_eval "prompt" $(export -p $varname); done < <(env | cut -f1 -d= | grep PYENV)
+
+		# Fetch the pyenv environment
+		async_job "prompt" prompt_async_pyenv
+
+	else
+		unset prompt_pyenv_env
+	fi
+
 	typeset -gA prompt_vcs_info
 
 	local -H MATCH MBEGIN MEND
@@ -408,7 +432,7 @@ prompt_async_refresh() {
 	integer time_since_last_dirty_check=$(( EPOCHSECONDS - ${prompt_git_last_dirty_check_timestamp:-0} ))
 	if (( time_since_last_dirty_check > ${PURE_GIT_DELAY_DIRTY_CHECK:-1800} )); then
 		unset prompt_git_last_dirty_check_timestamp
-		# Check check if there is anything to pull.
+		# Check if there is anything to pull.
 		async_job "prompt" prompt_async_git_dirty ${PURE_GIT_UNTRACKED_DIRTY:-1}
 	fi
 }
@@ -450,6 +474,7 @@ prompt_async_callback() {
 				# The path has changed since the check started, abort.
 				return
 			fi
+
 			# Check if Git top-level has changed.
 			if [[ $info[top] = $prompt_vcs_info[top] ]]; then
 				# If the stored pwd is part of $PWD, $PWD is shorter and likelier
@@ -494,6 +519,10 @@ prompt_async_callback() {
 			# preprompt is rendered before setting this variable. Thus, only upon the next
 			# rendering of the preprompt will the result appear in a different color.
 			(( $exec_time > 5 )) && prompt_git_last_dirty_check_timestamp=$EPOCHSECONDS
+			;;
+		prompt_async_pyenv)
+			prompt_pyenv_env=$output
+			do_render=1
 			;;
 		prompt_async_git_fetch|prompt_async_git_arrows)
 			# `prompt_async_git_fetch` executes `prompt_async_git_arrows`
@@ -765,7 +794,7 @@ prompt_setup() {
 	# add colors to highlight essential parts like file and function name.
 	PROMPT4="${ps4_parts[depth]} ${ps4_symbols}${ps4_parts[prompt]}"
 
-	# Guard against Oh My Zsh themes overriding Pure.
+	# Guard against Oh My Zsh themes overriding this prompt
 	unset ZSH_THEME
 }
 
