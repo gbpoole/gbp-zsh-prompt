@@ -105,11 +105,12 @@ prompt_preexec() {
 # Change the colors if their value are different from the current ones.
 prompt_set_colors() {
 	local color_temp key value
+
 	for key value in ${(kv)prompt_colors}; do
-		zstyle -t ":prompt:pure:$key" color "$value"
+		zstyle -t ":gbp-zsh-prompt:$key" color "$value"
 		case $? in
 			1) # The current style is different from the one from zstyle.
-				zstyle -s ":prompt:pure:$key" color color_temp
+				zstyle -s ":gbp-zsh-prompt:$key" color color_temp
 				prompt_colors[$key]=$color_temp ;;
 			2) # No style is defined.
 				prompt_colors[$key]=$prompt_colors_default[$key] ;;
@@ -232,12 +233,6 @@ prompt_precmd() {
 
 	# Print the preprompt.
 	prompt_preprompt_render "precmd"
-
-	if [[ -n $ZSH_THEME ]]; then
-		print "WARNING: Oh My Zsh themes are enabled (ZSH_THEME='${ZSH_THEME}'). This prompt might not be working correctly."
-		print "For more information, see: https://github.com/sindresorhus/pure#oh-my-zsh"
-		unset ZSH_THEME  # Only show this warning once.
-	fi
 }
 
 prompt_async_git_aliases() {
@@ -353,7 +348,7 @@ prompt_async_git_arrows() {
 prompt_async_tasks() {
 	setopt localoptions noshwordsplit
 
-	# Initialize the async workers
+	# Initialize the async worker
 	# This gets done once at the beginning or again if we notice
 	# that the worker has been killed
 	((!${prompt_async_init_git:-0})) && {
@@ -361,32 +356,36 @@ prompt_async_tasks() {
 		async_register_callback "prompt_worker_git" prompt_async_callback_git
 		typeset -g prompt_async_init_git=1
 	}
-	((!${prompt_async_init_pyenv:-0})) && {
-		async_start_worker "prompt_worker_pyenv" -u -n
-		async_register_callback "prompt_worker_pyenv" prompt_async_callback_pyenv
-		typeset -g prompt_async_init_pyenv=1
-	}
-
 	# Update the current working directory of the async worker.
 	async_worker_eval "prompt_worker_git" builtin cd -q $PWD
-	async_worker_eval "prompt_worker_pyenv" builtin cd -q $PWD
 
+	# initialize everything needed for the pyenv environment name
+	# Clear the environemnt name to start
+	unset prompt_pyenv_env
 	if type pyenv > /dev/null 2>&1; then
-		typeset -g prompt_pyenv_env
+		# Initialize the async worker
+		# This gets done once at the beginning or again if we notice
+		# that the worker has been killed
+		((!${prompt_async_init_pyenv:-0})) && {
+			async_start_worker "prompt_worker_pyenv" -u -n
+			async_register_callback "prompt_worker_pyenv" prompt_async_callback_pyenv
+			typeset -g prompt_async_init_pyenv=1
+		}
+
+		# Update the current working directory of the async worker.
+		async_worker_eval "prompt_worker_pyenv" builtin cd -q $PWD
 
 		# Keep these values up-to-date for the worker, since they're used by `pyenv version-name`
 		# First: clear them from the worker (note: this is needed because values can be deleted as
 		# well as changed)
 		async_worker_eval "prompt_worker_pyenv" "while read -r varname; do unset \$varname; done < <(env | cut -f1 -d= | grep PYENV)"
 
-		# Second: update
+		# Second: update them
 		while read -r varname; do async_worker_eval "prompt_worker_pyenv" $(export -p $varname); done < <(env | cut -f1 -d= | grep PYENV)
 
 		# Fetch the pyenv environment
 		async_job "prompt_worker_pyenv" prompt_async_pyenv
 
-	else
-		unset prompt_pyenv_env
 	fi
 
 	typeset -gA prompt_vcs_info
@@ -469,7 +468,7 @@ prompt_async_callback_pyenv() {
 			fi
 			;;
 		prompt_async_pyenv)
-			prompt_pyenv_env=$output
+			typeset -g prompt_pyenv_env=$output
 			do_render=1
 			;;
 	esac
