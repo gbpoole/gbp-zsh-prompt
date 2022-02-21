@@ -300,7 +300,6 @@ prompt_async_git_dirty() {
 
 prompt_async_pyenv() {
 	setopt localoptions noshwordsplit
-	# print -r $(env | grep PYENV) $(pyenv version-name) ${PWD}
 	print -r $(pyenv version-name)
 }
 
@@ -354,31 +353,37 @@ prompt_async_git_arrows() {
 prompt_async_tasks() {
 	setopt localoptions noshwordsplit
 
-	# Initialize the async worker.
-	((!${prompt_async_init:-0})) && {
-		async_start_worker "prompt" -u -n
-		async_register_callback "prompt" prompt_async_callback
-		typeset -g prompt_async_init=1
+	# Initialize the async workers
+	# This gets done once at the beginning or again if we notice
+	# that the worker has been killed
+	((!${prompt_async_init_git:-0})) && {
+		async_start_worker "prompt_worker_git" -u -n
+		async_register_callback "prompt_worker_git" prompt_async_callback_git
+		typeset -g prompt_async_init_git=1
+	}
+	((!${prompt_async_init_pyenv:-0})) && {
+		async_start_worker "prompt_worker_pyenv" -u -n
+		async_register_callback "prompt_worker_pyenv" prompt_async_callback_pyenv
+		typeset -g prompt_async_init_pyenv=1
 	}
 
 	# Update the current working directory of the async worker.
-	async_worker_eval "prompt" builtin cd -q $PWD
+	async_worker_eval "prompt_worker_git" builtin cd -q $PWD
+	async_worker_eval "prompt_worker_pyenv" builtin cd -q $PWD
 
 	if type pyenv > /dev/null 2>&1; then
 		typeset -g prompt_pyenv_env
-		# env | grep PYENV
-
-		# while read -r varname; do echo async_worker_eval "prompt" $(export -p $varname); done < <(env | cut -f1 -d= | grep PYENV)
 
 		# Keep these values up-to-date for the worker, since they're used by `pyenv version-name`
 		# First: clear them from the worker (note: this is needed because values can be deleted as
 		# well as changed)
-		async_worker_eval "prompt" "while read -r varname; do unset \$varname; done < <(env | cut -f1 -d= | grep PYENV)"
+		async_worker_eval "prompt_worker_pyenv" "while read -r varname; do unset \$varname; done < <(env | cut -f1 -d= | grep PYENV)"
+
 		# Second: update
-		while read -r varname; do async_worker_eval "prompt" $(export -p $varname); done < <(env | cut -f1 -d= | grep PYENV)
+		while read -r varname; do async_worker_eval "prompt_worker_pyenv" $(export -p $varname); done < <(env | cut -f1 -d= | grep PYENV)
 
 		# Fetch the pyenv environment
-		async_job "prompt" prompt_async_pyenv
+		async_job "prompt_worker_pyenv" prompt_async_pyenv
 
 	else
 		unset prompt_pyenv_env
@@ -389,7 +394,7 @@ prompt_async_tasks() {
 	local -H MATCH MBEGIN MEND
 	if [[ $PWD != ${prompt_vcs_info[pwd]}* ]]; then
 		# Stop any running async jobs.
-		async_flush_jobs "prompt"
+		async_flush_jobs "prompt_worker_git"
 
 		# Reset Git preprompt variables, switching working tree.
 		unset prompt_git_dirty
@@ -401,7 +406,7 @@ prompt_async_tasks() {
 	fi
 	unset MATCH MBEGIN MEND
 
-	async_job "prompt" prompt_async_vcs_info
+	async_job "prompt_worker_git" prompt_async_vcs_info
 
 	# Only perform tasks inside a Git working tree.
 	[[ -n $prompt_vcs_info[top] ]] || return
@@ -416,15 +421,15 @@ prompt_async_refresh() {
 		# We set the pattern here to avoid redoing the pattern check until the
 		# working three has changed. Pull and fetch are always valid patterns.
 		typeset -g prompt_git_fetch_pattern="pull|fetch"
-		async_job "prompt" prompt_async_git_aliases
+		async_job "prompt_worker_git" prompt_async_git_aliases
 	fi
 
-	async_job "prompt" prompt_async_git_arrows
+	async_job "prompt_worker_git" prompt_async_git_arrows
 
 	# Do not preform `git fetch` if it is disabled or in home folder.
 	if (( ${PURE_GIT_PULL:-1} )) && [[ $prompt_vcs_info[top] != $HOME ]]; then
 		# Tell the async worker to do a `git fetch`.
-		async_job "prompt" prompt_async_git_fetch
+		async_job "prompt_worker_git" prompt_async_git_fetch
 	fi
 
 	# If dirty checking is sufficiently fast,
@@ -433,7 +438,7 @@ prompt_async_refresh() {
 	if (( time_since_last_dirty_check > ${PURE_GIT_DELAY_DIRTY_CHECK:-1800} )); then
 		unset prompt_git_last_dirty_check_timestamp
 		# Check if there is anything to pull.
-		async_job "prompt" prompt_async_git_dirty ${PURE_GIT_UNTRACKED_DIRTY:-1}
+		async_job "prompt_worker_git" prompt_async_git_dirty ${PURE_GIT_UNTRACKED_DIRTY:-1}
 	fi
 }
 
@@ -450,7 +455,7 @@ prompt_check_git_arrows() {
 	typeset -g REPLY=$arrows
 }
 
-prompt_async_callback() {
+prompt_async_callback_pyenv() {
 	setopt localoptions noshwordsplit
 	local job=$1 code=$2 output=$3 exec_time=$4 next_pending=$6
 	local do_render=0
@@ -460,7 +465,35 @@ prompt_async_callback() {
 			# Code is 1 for corrupted worker output and 2 for dead worker.
 			if [[ $code -eq 2 ]]; then
 				# Our worker died unexpectedly.
-				typeset -g prompt_async_init=0
+				typeset -g prompt_async_init_pyenv=0
+			fi
+			;;
+		prompt_async_pyenv)
+			prompt_pyenv_env=$output
+			do_render=1
+			;;
+	esac
+
+	if (( next_pending )); then
+		(( do_render )) && typeset -g prompt_async_render_requested=1
+		return
+	fi
+
+	[[ ${prompt_async_render_requested:-$do_render} = 1 ]] && prompt_preprompt_render
+	unset prompt_async_render_requested
+}
+
+prompt_async_callback_git() {
+	setopt localoptions noshwordsplit
+	local job=$1 code=$2 output=$3 exec_time=$4 next_pending=$6
+	local do_render=0
+
+	case $job in
+		\[async])
+			# Code is 1 for corrupted worker output and 2 for dead worker.
+			if [[ $code -eq 2 ]]; then
+				# Our worker died unexpectedly.
+				typeset -g prompt_async_init_git=0
 			fi
 			;;
 		prompt_async_vcs_info)
@@ -519,10 +552,6 @@ prompt_async_callback() {
 			# preprompt is rendered before setting this variable. Thus, only upon the next
 			# rendering of the preprompt will the result appear in a different color.
 			(( $exec_time > 5 )) && prompt_git_last_dirty_check_timestamp=$EPOCHSECONDS
-			;;
-		prompt_async_pyenv)
-			prompt_pyenv_env=$output
-			do_render=1
 			;;
 		prompt_async_git_fetch|prompt_async_git_arrows)
 			# `prompt_async_git_fetch` executes `prompt_async_git_arrows`
