@@ -137,8 +137,8 @@ prompt_preprompt_render() {
 	# Username and machine, if applicable.
 	[[ -n $prompt_state[username] ]] && preprompt_parts+=($prompt_state[username])
 
-	# Ppyenv environment
-	[[ -n $prompt_pyenv_env ]] && preprompt_parts+=("%F{$prompt_colors[pyenv]}"$'\uE73C${prompt_pyenv_env}%f')
+	# Pyenv environment
+	[[ -n $prompt_pyenv_env ]] && preprompt_parts+=($prompt_pyenv_env)
 
 	# Anaconda environment
 	if [[ ! -z $CONDA_DEFAULT_ENV ]]; then
@@ -295,7 +295,13 @@ prompt_async_git_dirty() {
 
 prompt_async_pyenv() {
 	setopt localoptions noshwordsplit
-	print -r $(pyenv version-name)
+	local pyenv_colour=$prompt_colors[pyenv]
+	local pyenv_version_name=$(pyenv version-name)
+	local pyenv_version_origin=$(pyenv version-origin)
+	if [[ $pyenv_version_origin == ${GBP_HOME}/.pyenv/version ]]; then
+		pyenv_colour=$prompt_colors[pyenv_global]
+	fi
+	print -r "%F{$pyenv_colour}"$'\uE73C'"${pyenv_version_name}%f"
 }
 
 prompt_async_git_fetch() {
@@ -767,6 +773,7 @@ prompt_setup() {
 		host                 75
 		conda                35
 		pyenv                47
+		pyenv_global         red
 		prompt:preprompt     218
 		path                 218
        )
