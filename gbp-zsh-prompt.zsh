@@ -137,15 +137,6 @@ prompt_preprompt_render() {
 	# Username and machine, if applicable.
 	[[ -n $prompt_state[username] ]] && preprompt_parts+=($prompt_state[username])
 
-	# Pyenv environment
-	[[ -n $prompt_pyenv_env ]] && preprompt_parts+=($prompt_pyenv_env)
-
-	# Anaconda environment
-	if [[ ! -z $CONDA_DEFAULT_ENV ]]; then
-		conda_env="${CONDA_DEFAULT_ENV//[$'\t\r\n']}"
-		preprompt_parts+=("%F{$prompt_colors[conda]}"$'\uE73C${conda_env}%f')
-	fi
-
 	# Git status
 	typeset -gA prompt_vcs_info
 	if [[ -n $prompt_vcs_info[branch] ]]; then
@@ -161,6 +152,15 @@ prompt_preprompt_render() {
 			git_text=$git_text'%F{$prompt_colors[git:status]}${prompt_git_arrows}%f'
 		fi
 		preprompt_parts+=( $git_text )
+	fi
+
+	# Pyenv environment
+	[[ -n $prompt_pyenv_env ]] && preprompt_parts+=($prompt_pyenv_env)
+
+	# Anaconda environment
+	if [[ ! -z $CONDA_DEFAULT_ENV ]]; then
+		conda_env="${CONDA_DEFAULT_ENV//[$'\t\r\n']}"
+		preprompt_parts+=("%F{$prompt_colors[conda]}"$'\uE73C${conda_env}%f')
 	fi
 
 	# Execution time.
