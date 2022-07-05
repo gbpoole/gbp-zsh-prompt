@@ -97,7 +97,7 @@ prompt_preexec() {
 	prompt_set_title 'ignore-escape' "$PWD:t: $2"
 
 	# Disallow Python virtualenv from updating the prompt. Set it to 12 if
-	# untouched by the user to indicate that Pure modified it. Here we use
+	# untouched by the user to indicate that this prompt modified it. Here we use
 	# the magic number 12, same as in `psvar`.
 	export VIRTUAL_ENV_DISABLE_PROMPT=${VIRTUAL_ENV_DISABLE_PROMPT:-12}
 }
@@ -107,10 +107,10 @@ prompt_set_colors() {
 	local color_temp key value
 
 	for key value in ${(kv)prompt_colors}; do
-		zstyle -t ":gbp-zsh-prompt:$key" color "$value"
+		zstyle -t ":gbpPrompt:$key" color "$value"
 		case $? in
 			1) # The current style is different from the one from zstyle.
-				zstyle -s ":gbp-zsh-prompt:$key" color color_temp
+				zstyle -s ":gbpPrompt:$key" color color_temp
 				prompt_colors[$key]=$color_temp ;;
 			2) # No style is defined.
 				prompt_colors[$key]=$prompt_colors_default[$key] ;;
@@ -222,7 +222,7 @@ prompt_precmd() {
 		psvar[12]="${CONDA_DEFAULT_ENV//[$'\t\r\n']}"
 	fi
 	# When VIRTUAL_ENV_DISABLE_PROMPT is empty, it was unset by the user and
-	# Pure should take back control.
+	# this prompt should take back control.
 	if [[ -n $VIRTUAL_ENV ]] && [[ -z $VIRTUAL_ENV_DISABLE_PROMPT || $VIRTUAL_ENV_DISABLE_PROMPT = 12 ]]; then
 		psvar[12]="${VIRTUAL_ENV:t}"
 		export VIRTUAL_ENV_DISABLE_PROMPT=12
@@ -699,7 +699,7 @@ prompt_system_report() {
 	git_version=($(git --version))  # Remove newlines, if hub is present.
 	print - "- Git: $git_version"
 
-	print - "- Pure state:"
+	print - "- gbpPrompt state:"
 	for k v in "${(@kv)prompt_state}"; do
 		print - "\t- $k: \`${(q)v}\`"
 	done
@@ -728,13 +728,13 @@ prompt_system_report() {
 	fi
 }
 
-prompt_setup() {
+prompt_gbpPrompt_setup() {
 	# Prevent percentage showing up if output doesn't end with a newline.
 	export PROMPT_EOL_MARK=''
 
 	prompt_opts=(subst percent)
 
-	# Borrowed from `promptinit`. Sets the prompt options in case Pure was not
+	# Borrowed from `promptinit`. Sets the prompt options in case this prompt was not
 	# initialized via `promptinit`.
 	setopt noprompt{bang,cr,percent,subst} "prompt${^prompt_opts[@]}"
 
@@ -833,4 +833,4 @@ prompt_setup() {
 	unset ZSH_THEME
 }
 
-prompt_setup "$@"
+prompt_gbpPrompt_setup "$@"
