@@ -833,6 +833,4 @@ prompt_setup() {
 	unset ZSH_THEME
 }
 
-if [[ -o login ]]; then
-    prompt_setup "$@"
-fi
+prompt_setup "$@"

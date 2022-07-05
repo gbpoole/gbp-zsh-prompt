@@ -1,1 +1,0 @@
-gbp-zsh-prompt.zsh
