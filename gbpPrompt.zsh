@@ -47,7 +47,7 @@ prompt_check_cmd_exec_time() {
 	integer elapsed
 	(( elapsed = EPOCHSECONDS - ${prompt_cmd_timestamp:-$EPOCHSECONDS} ))
 	typeset -g prompt_cmd_exec_time=
-	(( elapsed > ${PURE_CMD_MAX_EXEC_TIME:-5} )) && {
+	(( elapsed > ${GBPPROMPT_CMD_MAX_EXEC_TIME:-5} )) && {
 		prompt_human_time_to_var $elapsed "prompt_cmd_exec_time"
 	}
 }
@@ -432,7 +432,7 @@ prompt_async_refresh() {
 	async_job "prompt_worker_git" prompt_async_git_arrows
 
 	# Do not preform `git fetch` if it is disabled or in home folder.
-	if (( ${PURE_GIT_PULL:-1} )) && [[ $prompt_vcs_info[top] != $HOME ]]; then
+	if (( ${GBPPROMPT_GIT_PULL:-1} )) && [[ $prompt_vcs_info[top] != $HOME ]]; then
 		# Tell the async worker to do a `git fetch`.
 		async_job "prompt_worker_git" prompt_async_git_fetch
 	fi
@@ -440,10 +440,10 @@ prompt_async_refresh() {
 	# If dirty checking is sufficiently fast,
 	# tell the worker to check it again, or wait for timeout.
 	integer time_since_last_dirty_check=$(( EPOCHSECONDS - ${prompt_git_last_dirty_check_timestamp:-0} ))
-	if (( time_since_last_dirty_check > ${PURE_GIT_DELAY_DIRTY_CHECK:-1800} )); then
+	if (( time_since_last_dirty_check > ${GBPPROMPT_GIT_DELAY_DIRTY_CHECK:-1800} )); then
 		unset prompt_git_last_dirty_check_timestamp
 		# Check if there is anything to pull.
-		async_job "prompt_worker_git" prompt_async_git_dirty ${PURE_GIT_UNTRACKED_DIRTY:-1}
+		async_job "prompt_worker_git" prompt_async_git_dirty ${GBPPROMPT_GIT_UNTRACKED_DIRTY:-1}
 	fi
 }
 
@@ -451,10 +451,10 @@ prompt_check_git_arrows() {
 	setopt localoptions noshwordsplit
 	local arrows left=${1:-0} right=${2:-0}
 
-	(( right > 0 )) && arrows+=${PURE_GIT_DOWN_ARROW:-$'\uFC2C'}
-	# (( right > 0 )) && arrows+=${PURE_GIT_DOWN_ARROW:-⇣}
-	(( left > 0 )) && arrows+=${PURE_GIT_UP_ARROW:-$'\uFC35'}
-	# (( left > 0 )) && arrows+=${PURE_GIT_UP_ARROW:-⇡}
+	(( right > 0 )) && arrows+=${GBPPROMPT_GIT_DOWN_ARROW:-$'\uFC2C'}
+	# (( right > 0 )) && arrows+=${GBPPROMPT_GIT_DOWN_ARROW:-⇣}
+	(( left > 0 )) && arrows+=${GBPPROMPT_GIT_UP_ARROW:-$'\uFC35'}
+	# (( left > 0 )) && arrows+=${GBPPROMPT_GIT_UP_ARROW:-⇡}
 
 	[[ -n $arrows ]] || return
 	typeset -g REPLY=$arrows
@@ -609,14 +609,14 @@ prompt_reset_prompt() {
 }
 
 prompt_reset_prompt_symbol() {
-	prompt_state[preprompt]="${PURE_PROMPT_PRESYMBOL}"
-	prompt_state[prompt]=${PURE_PROMPT_SYMBOL:-❯}
+	prompt_state[preprompt]="${GBPPROMPT_PROMPT_PRESYMBOL}"
+	prompt_state[prompt]=${GBPPROMPT_PROMPT_SYMBOL:-❯}
 }
 
 prompt_update_vim_prompt_widget() {
 	setopt localoptions noshwordsplit
-	prompt_state[preprompt]="${PURE_PROMPT_PRESYMBOL}"
-	prompt_state[prompt]=${${KEYMAP/vicmd/${PURE_PROMPT_VICMD_SYMBOL:-❮}}/(main|viins)/${PURE_PROMPT_SYMBOL:-❯}}
+	prompt_state[preprompt]="${GBPPROMPT_PROMPT_PRESYMBOL}"
+	prompt_state[prompt]=${${KEYMAP/vicmd/${GBPPROMPT_PROMPT_VICMD_SYMBOL:-❮}}/(main|viins)/${GBPPROMPT_PROMPT_SYMBOL:-❯}}
 
 	prompt_reset_prompt
 }
@@ -633,7 +633,7 @@ prompt_state_setup() {
 	setopt localoptions noshwordsplit
 
 	# Check SSH_CONNECTION and the current state.
-	local ssh_connection=${SSH_CONNECTION:-$PROMPT_PURE_SSH_CONNECTION}
+	local ssh_connection=${SSH_CONNECTION:-$PROMPT_GBPPROMPT_SSH_CONNECTION}
 	local username hostname
 	if [[ -z $ssh_connection ]] && (( $+commands[who] )); then
 		# When changing user on a remote system, the $SSH_CONNECTION
@@ -662,7 +662,7 @@ prompt_state_setup() {
 			# Export variable to allow detection propagation inside
 			# shells spawned by this one (e.g. tmux does not always
 			# inherit the same tty, which breaks detection).
-			export PROMPT_PURE_SSH_CONNECTION=$ssh_connection
+			export PROMPT_GBPPROMPT_SSH_CONNECTION=$ssh_connection
 		fi
 		unset MATCH MBEGIN MEND
 	fi
@@ -679,8 +679,8 @@ prompt_state_setup() {
 	prompt_state[version]="1.10.3"
 	prompt_state+=(
 		username "$username"
-		preprompt "${PURE_PROMPT_PRESYMBOL}"
-		prompt "${PURE_PROMPT_SYMBOL:-❯}"
+		preprompt "${GBPPROMPT_PROMPT_PRESYMBOL}"
+		prompt "${GBPPROMPT_PROMPT_SYMBOL:-❯}"
 	)
 }
 
