@@ -1,4 +1,4 @@
-#gbpPrompt 
+# gbpPrompt 
 
 
 This is a fork and substantial modification of [sindresorhus/pure](https://github.com/sindresorhus/pure).  Please visit there for more information.
@@ -13,7 +13,7 @@ I use antidote to install this plugin, but others should work.  Not rigorously t
 
 ## Getting started
 
-Initialize the prompt system (if not so already) and choose `pure`:
+Initialize the prompt system (if not so already) and choose `gbpPrompt`:
 
 ```sh
 # .zshrc
@@ -21,7 +21,6 @@ autoload -U promptinit; promptinit
 prompt gbpPrompt
 ```
 
----|---
 
 Contact info: [Personal Homepage][1] | [Email Me][2]
 
